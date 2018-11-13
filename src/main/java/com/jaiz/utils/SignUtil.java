@@ -56,10 +56,8 @@ public class SignUtil {
             //这里先认为不会以数组进行传参
             String valueForSign= valueArr[0];
             sb.append(key).append("=").append(valueForSign).append("&");
-            //System.out.println("key="+key+", value="+valueForSign);
         }
         sb.append("signKey=").append(SIGN_SALT);
-        //System.out.println("pre sign value is: "+sb.toString());
         String serverSign=MD5Util.md5(sb.toString());
         System.out.println("sign value should be: "+serverSign);
         return serverSign.equalsIgnoreCase(clientSign);
