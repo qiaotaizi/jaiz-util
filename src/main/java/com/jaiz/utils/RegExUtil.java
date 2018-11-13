@@ -5,9 +5,20 @@ package com.jaiz.utils;
  */
 public class RegExUtil {
 
+    /**
+     * 手机号码正则
+     */
     private final static String PHONE_REGEX="^[0-9]{11}$";
 
+    /**
+     * 用户登录名正则
+     */
     private final static String LOGIN_NAME_REGEX="^\\w{6,12}$";
+
+    /**
+     * 用户Email正则
+     */
+    private final static String EMAIL_REGEX="^[A-Za-z0-9\u4e00-\u9fa5_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$";
 
     /**
      * 校验手机号是否符合正则
@@ -28,9 +39,12 @@ public class RegExUtil {
         return loginName.matches(LOGIN_NAME_REGEX);
     }
 
-    public static void main(String[] args) {
-        String s="asd123_@Ah";
-        System.out.println(validLoginName(s));
-
+    /**
+     * 校验email是否符合正则
+     * @param email
+     * @return
+     */
+    public static boolean validEmail(String email){
+        return email.matches(EMAIL_REGEX);
     }
 }

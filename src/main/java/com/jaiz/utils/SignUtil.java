@@ -61,19 +61,8 @@ public class SignUtil {
         sb.append("signKey=").append(SIGN_SALT);
         //System.out.println("pre sign value is: "+sb.toString());
         String serverSign=MD5Util.md5(sb.toString());
-        //System.out.println("sign value should be: "+serverSign);
+        System.out.println("sign value should be: "+serverSign);
         return serverSign.equalsIgnoreCase(clientSign);
     }
 
-    public static void main(String[] args) {
-        String[] v1={"name"};
-        String[] v2=null;
-        String[] sign={"FC01288DAFD0745D68AA5A5637CE5392"};
-        Map<String,String[]> pm=new HashMap<>();
-        pm.put("k1",v1);
-        pm.put("k2",v2);
-        pm.put("sign",sign);
-        boolean b=signValid(pm);
-        System.out.println(b);
-    }
 }
