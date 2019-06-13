@@ -7,7 +7,7 @@ import java.util.*;
 
 public class VOInitializeUtil {
 
-    private static final boolean echoStatus=true;
+    private static final boolean echoStatus=false;
 
     private static void echo(String str){
         if(echoStatus){
@@ -96,11 +96,13 @@ public class VOInitializeUtil {
         //考虑一下几种情形:
         //1.基本数据类型的装箱
         //2.String
+        //Date
         //3.数组
         //4.列表
         //5.set
         //6.Map
         //其他引用类型
+        Date d=new Date();
         Class fType=f.getType();
         if (fType.getName().startsWith("[")) {
             //数组
