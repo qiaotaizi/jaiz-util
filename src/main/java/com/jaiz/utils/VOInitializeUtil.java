@@ -102,7 +102,6 @@ public class VOInitializeUtil {
         //5.set
         //6.Map
         //其他引用类型
-        Date d=new Date();
         Class fType=f.getType();
         if (fType.getName().startsWith("[")) {
             //数组
@@ -123,7 +122,9 @@ public class VOInitializeUtil {
         else if (fType == String.class) {
             //字符串
             setter.invoke(instance, "测试字符串值");
-        } else if (fType == Integer.class  ||
+        }else if(fType==Date.class){
+            setter.invoke(instance,new Date());
+        }else if (fType == Integer.class  ||
                 fType == Long.class  ||
                 fType == Short.class  ||
                 fType == Byte.class ) {

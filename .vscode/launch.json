@@ -1,0 +1,11 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "CodeLens (Launch) - VOInitializingTest",
+            "request": "launch",
+            "mainClass": "com.jaiz.utils.VOInitializingTest",
+            "projectName": "jaiz-utils"
+        }
+    ]
+}
