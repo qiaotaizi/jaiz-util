@@ -1,14 +1,26 @@
 package com.jaiz.utils;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class VOInitializeUtil {
+
+    private static final boolean echoStatus=true;
+
+    private static void echo(String str){
+        if(echoStatus){
+            System.out.println(str);
+        }
+    }
+
+    private static void echo(Boolean bool){
+        if(echoStatus){
+            System.out.println(bool);
+        }
+    }
+
 
     /**
      * 递归初始化一个类的所有属性
@@ -36,10 +48,10 @@ public class VOInitializeUtil {
             fList.addAll(Arrays.asList(fs));
             superClazz = superClazz.getSuperclass();
         } while (superClazz != null);
-        clazz.getSuperclass();
+
         for (Field f : fList) {
-            System.out.println("成员名=" + f.getName());
-            System.out.println("成员类型=" + f.getType());
+            echo("成员名=" + f.getName());
+            echo("成员类型=" + f.getType());
             //字段名
             String fieldName = f.getName();
             //public set方法名
@@ -48,7 +60,7 @@ public class VOInitializeUtil {
             try {
                 fieldSetter = clazz.getMethod(fieldSetterName, f.getType());
             } catch (NoSuchMethodException e) {
-                System.err.println("属性" + fieldName + "无对应的setter");
+                System.err.println("类"+clazz.getName()+"的属性" + fieldName + "无对应的setter");
                 e.printStackTrace();
                 continue;
             }
@@ -56,28 +68,13 @@ public class VOInitializeUtil {
 
                 Class fType = f.getType();
 
-                if (fType == String.class) {
-                    //字符串
-                    fieldSetter.invoke(instance, "测试字符串值");
-                } else if (fType == Integer.class || fType == int.class ||
-                        fType == Long.class || fType == long.class ||
-                        fType == Short.class || fType == short.class ||
-                        fType == Byte.class || fType == byte.class) {
-                    //整形数值
-                    fieldSetter.invoke(instance, 1);
-                } else if (fType == Float.class || fType == float.class ||
-                        fType == Double.class || fType == double.class) {
-                    //浮点型数值
-                    fieldSetter.invoke(instance, 1.23);
-                } else if (fType == Boolean.class || fType == boolean.class) {
-                    //布尔
-                    fieldSetter.invoke(instance, true);
-                } else if (fType == Character.class || fType == char.class) {
-                    //字符
-                    fieldSetter.invoke(instance, 'a');
-                }else if (fType== Array.class){
-                    //数组
-                    System.out.println(fieldName+"是数组");
+                echo(fType.isPrimitive());
+                if (fType.isPrimitive()) {
+                    //处理基本数据类型
+                    dealWithPrimitiveType(fType, instance, fieldSetter);
+                }else{
+                    //处理非基本数据类型
+                    dealWithNonPrimitiveType(f,instance,fieldSetter);
                 }
 
             } catch (IllegalAccessException | InvocationTargetException e) {
@@ -86,6 +83,93 @@ public class VOInitializeUtil {
             }
         }
         return instance;
+    }
+
+    /**
+     * 处理非基本数据类型
+     * @param f
+     * @param instance
+     * @param setter
+     * @param <T>
+     */
+    private static <T> void dealWithNonPrimitiveType(Field f, T instance, Method setter) throws InvocationTargetException, IllegalAccessException {
+        //考虑一下几种情形:
+        //1.基本数据类型的装箱
+        //2.String
+        //3.数组
+        //4.列表
+        //5.set
+        //6.Map
+        //其他引用类型
+        Class fType=f.getType();
+        if (fType.getName().startsWith("[")) {
+            //数组
+            echo("这是数组:" + fType.getName() + ";元素类型是:" + fType.getComponentType().getName());
+        } else if (fType.isAssignableFrom(List.class)) {
+            echo("这是List:" + fType.getName() + ";泛型是:" + f.getGenericType());
+//            if(fType==List.class){
+//                //使用ArrayList作为默认实现
+//
+//            }else{
+//
+//            }
+        }else if (fType.isAssignableFrom(Set.class)){
+            echo("这是Set:" + fType.getName() + ";泛型是:" + f.getGenericType());
+        }else if(fType.isAssignableFrom(Map.class)){
+            echo("这是Map:" + fType.getName() + ";泛型是:" + f.getGenericType());
+        }
+        else if (fType == String.class) {
+            //字符串
+            setter.invoke(instance, "测试字符串值");
+        } else if (fType == Integer.class  ||
+                fType == Long.class  ||
+                fType == Short.class  ||
+                fType == Byte.class ) {
+            //整形数值
+            setter.invoke(instance, 1);
+        } else if (fType == Float.class ||
+                fType == Double.class ) {
+            //浮点型数值
+            setter.invoke(instance, 1.23);
+        } else if (fType == Boolean.class ) {
+            //布尔
+            setter.invoke(instance, true);
+        } else if (fType == Character.class ) {
+            //字符
+            setter.invoke(instance, 'a');
+        }else{
+            //其他引用类型
+            setter.invoke(instance,initialize(fType));
+        }
+    }
+
+    /**
+     * 处理基本数据类型
+     * @param fType
+     * @param instance
+     * @param setter
+     * @param <T>
+     * @throws InvocationTargetException
+     * @throws IllegalAccessException
+     */
+    private static <T> void dealWithPrimitiveType(Class fType, T instance, Method setter) throws InvocationTargetException, IllegalAccessException {
+        if (fType == int.class ||
+                fType == long.class ||
+                fType == short.class ||
+                fType == byte.class) {
+            //整形数值
+            setter.invoke(instance, 1);
+        } else if (fType == float.class ||
+                fType == double.class) {
+            //浮点型数值
+            setter.invoke(instance, 1.23);
+        } else if (fType == boolean.class) {
+            //布尔
+            setter.invoke(instance, true);
+        } else if (fType == char.class) {
+            //字符
+            setter.invoke(instance, 'a');
+        }
     }
 
 }
