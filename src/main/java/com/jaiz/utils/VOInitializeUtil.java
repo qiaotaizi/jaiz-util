@@ -1,40 +1,9 @@
 package com.jaiz.utils;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
 import java.util.*;
 
 public class VOInitializeUtil {
-
-    /**
-     * 开关控制
-     */
-    private static final boolean on=true;
-    private static final boolean off=false;
-
-    private static final boolean echoStatus=on;
-
-    /**
-     * 控制台输出
-     * 取代System.out.println()
-     */
-    private static void echo(String str){
-        if(echoStatus){
-            System.out.println(str);
-        }
-    }
-
-    /**
-     * 控制台输出
-     * 取代System.out.println()
-     */
-    private static void echo(Boolean bool){
-        if(echoStatus){
-            System.out.println(bool);
-        }
-    }
-
 
     /**
      * 递归初始化一个类的所有属性
@@ -64,8 +33,8 @@ public class VOInitializeUtil {
         } while (superClazz != null);
 
         for (Field f : fList) {
-            echo("成员名=" + f.getName());
-            echo("成员类型=" + f.getType());
+            //echo("成员名=" + f.getName());
+            //echo("成员类型=" + f.getType());
             //字段名
             String fieldName = f.getName();
             //public set方法名
@@ -74,20 +43,20 @@ public class VOInitializeUtil {
             try {
                 fieldSetter = clazz.getMethod(fieldSetterName, f.getType());
             } catch (NoSuchMethodException e) {
-                System.err.println("类"+clazz.getName()+"的属性" + fieldName + "无对应的setter");
+                System.err.println("类" + clazz.getName() + "的属性" + fieldName + "无对应的setter");
                 //e.printStackTrace();
                 continue;
             }
             try {
 
                 Class<?> fType = f.getType();
-                echo(fType.isPrimitive());
+                //echo(fType.isPrimitive());
                 if (fType.isPrimitive()) {
                     //处理基本数据类型
                     dealWithPrimitiveType(fType, instance, fieldSetter);
-                }else{
+                } else {
                     //处理非基本数据类型
-                    dealWithNonPrimitiveType(f,instance,fieldSetter);
+                    dealWithNonPrimitiveType(f, instance, fieldSetter);
                 }
 
             } catch (IllegalAccessException | InvocationTargetException e) {
@@ -100,6 +69,7 @@ public class VOInitializeUtil {
 
     /**
      * 处理非基本数据类型
+     *
      * @param f
      * @param instance
      * @param setter
@@ -115,52 +85,98 @@ public class VOInitializeUtil {
         //5.set
         //6.Map
         //其他引用类型
-        Class<?> fType=f.getType();
+        Class<?> fType = f.getType();
         if (fType.getName().startsWith("[")) {
             //数组
-            echo("这是数组:" + fType.getName() + ";元素类型是:" + fType.getComponentType().getName());
+            //echo("这是数组:" + fType.getName() + ";元素类型是:" + fType.getComponentType().getName());
         } else if (fType.isAssignableFrom(List.class)) {
-            echo("这是List:" + fType.getName() + ";泛型是:" + f.getGenericType());
-//            if(fType==List.class){
-//                //使用ArrayList作为默认实现
-//
-//            }else{
-//
-//            }
-        }else if (fType.isAssignableFrom(Set.class)){
-            echo("这是Set:" + fType.getName() + ";泛型是:" + f.getGenericType());
-        }else if(fType.isAssignableFrom(Map.class)){
-            echo("这是Map:" + fType.getName() + ";泛型是:" + f.getGenericType());
-        }
-        else if (fType == String.class) {
+            //echo("这是List:" + fType.getName() + ";泛型是:" + f.getGenericType().getTypeName());
+            try {
+                setter.invoke(instance, initAGenericList(fType, Class.forName(clipGenericTypeName(f.getGenericType().getTypeName()))));
+            } catch (ClassNotFoundException e) {
+                System.err.println("列表成员" + f.getName() + "实例化失败,无法找到泛型类型");
+            }
+        } else if (fType.isAssignableFrom(Set.class)) {
+            //echo("这是Set:" + fType.getName() + ";泛型是:" + f.getGenericType());
+        } else if (fType.isAssignableFrom(Map.class)) {
+            //echo("这是Map:" + fType.getName() + ";泛型是:" + f.getGenericType());
+        } else if (fType == String.class) {
             //字符串
             setter.invoke(instance, "测试字符串值");
-        }else if(fType==Date.class){
-            setter.invoke(instance,new Date());
-        }else if (fType == Integer.class  ||
-                fType == Long.class  ||
-                fType == Short.class  ||
-                fType == Byte.class ) {
+        } else if (fType == Date.class) {
+            setter.invoke(instance, new Date());
+        } else if (fType == Integer.class ||
+                fType == Long.class ||
+                fType == Short.class ||
+                fType == Byte.class) {
             //整形数值
             setter.invoke(instance, 1);
         } else if (fType == Float.class ||
-                fType == Double.class ) {
+                fType == Double.class) {
             //浮点型数值
             setter.invoke(instance, 1.23);
-        } else if (fType == Boolean.class ) {
+        } else if (fType == Boolean.class) {
             //布尔
             setter.invoke(instance, true);
-        } else if (fType == Character.class ) {
+        } else if (fType == Character.class) {
             //字符
             setter.invoke(instance, 'a');
-        }else{
+        } else {
             //其他引用类型
-            setter.invoke(instance,initialize(fType));
+            setter.invoke(instance, initialize(fType));
         }
     }
 
     /**
+     * 截取泛型类型名
+     * 如java.util.List<java.lang.String>
+     * 截取为java.lang.String
+     *
+     * @param fullName
+     * @return
+     */
+    private static String clipGenericTypeName(String fullName) {
+        if(FastStringUtil.isBlank(fullName)){
+            return "EMPTY_TYPE_NAME";
+        }
+        int leftIndex = fullName.indexOf('<');
+        int rightIndex = fullName.indexOf('>');
+        if (
+                //符号存在
+                leftIndex >= 0 && rightIndex >= 0 &&
+                //位置正确
+                leftIndex < rightIndex &&
+                //避免越界
+                leftIndex<fullName.length() && rightIndex<fullName.length()
+        ) {
+            return fullName.substring(leftIndex+1,rightIndex);
+        }
+        return "UNKOWN_GENERIC_TYPE_NAME";
+    }
+
+    private static Object initAGenericList(Class<?> fType, Class<?> gType) {
+        if (fType == List.class) {
+            //使用ArrayList作为默认实现
+            ArrayList listInst = new ArrayList(1);
+            Object e=initialize(gType);
+            listInst.add(e);
+            return listInst;
+        } else {
+            try {
+                List listInst = (List) fType.newInstance();
+                Object e=initialize(gType);
+                listInst.add(e);
+                return listInst;
+            } catch (InstantiationException | IllegalAccessException e) {
+                System.err.println("列表实例化失败");
+            }
+        }
+        return null;
+    }
+
+    /**
      * 处理基本数据类型
+     *
      * @param fType
      * @param instance
      * @param setter
