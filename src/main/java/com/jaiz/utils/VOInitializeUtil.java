@@ -7,14 +7,28 @@ import java.util.*;
 
 public class VOInitializeUtil {
 
-    private static final boolean echoStatus=false;
+    /**
+     * 开关控制
+     */
+    private static final boolean on=true;
+    private static final boolean off=false;
 
+    private static final boolean echoStatus=on;
+
+    /**
+     * 控制台输出
+     * 取代System.out.println()
+     */
     private static void echo(String str){
         if(echoStatus){
             System.out.println(str);
         }
     }
 
+    /**
+     * 控制台输出
+     * 取代System.out.println()
+     */
     private static void echo(Boolean bool){
         if(echoStatus){
             System.out.println(bool);
@@ -42,7 +56,7 @@ public class VOInitializeUtil {
         //获取所有成员,包括继承过来的属性,解决继承问题
         Field[] fs = clazz.getDeclaredFields();
         List<Field> fList = new LinkedList<>(Arrays.asList(fs));
-        Class superClazz = clazz.getSuperclass();
+        Class<?> superClazz = clazz.getSuperclass();
         do {
             fs = superClazz.getDeclaredFields();
             fList.addAll(Arrays.asList(fs));
@@ -61,13 +75,12 @@ public class VOInitializeUtil {
                 fieldSetter = clazz.getMethod(fieldSetterName, f.getType());
             } catch (NoSuchMethodException e) {
                 System.err.println("类"+clazz.getName()+"的属性" + fieldName + "无对应的setter");
-                e.printStackTrace();
+                //e.printStackTrace();
                 continue;
             }
             try {
 
-                Class fType = f.getType();
-
+                Class<?> fType = f.getType();
                 echo(fType.isPrimitive());
                 if (fType.isPrimitive()) {
                     //处理基本数据类型
@@ -79,7 +92,7 @@ public class VOInitializeUtil {
 
             } catch (IllegalAccessException | InvocationTargetException e) {
                 System.err.println("成员" + fieldName + "设置值失败");
-                e.printStackTrace();
+                //e.printStackTrace();
             }
         }
         return instance;
@@ -102,7 +115,7 @@ public class VOInitializeUtil {
         //5.set
         //6.Map
         //其他引用类型
-        Class fType=f.getType();
+        Class<?> fType=f.getType();
         if (fType.getName().startsWith("[")) {
             //数组
             echo("这是数组:" + fType.getName() + ";元素类型是:" + fType.getComponentType().getName());
@@ -155,7 +168,7 @@ public class VOInitializeUtil {
      * @throws InvocationTargetException
      * @throws IllegalAccessException
      */
-    private static <T> void dealWithPrimitiveType(Class fType, T instance, Method setter) throws InvocationTargetException, IllegalAccessException {
+    private static <T> void dealWithPrimitiveType(Class<?> fType, T instance, Method setter) throws InvocationTargetException, IllegalAccessException {
         if (fType == int.class ||
                 fType == long.class ||
                 fType == short.class ||
