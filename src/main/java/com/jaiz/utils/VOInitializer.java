@@ -1,9 +1,8 @@
 package com.jaiz.utils;
 
-import com.sun.xml.internal.ws.spi.db.FieldSetter;
-
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 
@@ -137,40 +136,57 @@ public class VOInitializer {
     }
 
     private <T> T initJavaBean(Class<T> clazz) {
-        //找到所有成员
-        //找到所有public Setter方法
-        //调用之
-
-        List<Field> fList=new ArrayList<>(clazz.getDeclaredFields().length);
-
+        T inst;
+        try {
+            inst= clazz.newInstance();
+        } catch (InstantiationException | IllegalAccessException e) {
+            err("java Bean实例化失败");
+            e.printStackTrace();
+            return null;
+        }
+        //找到所有成员属性
+        //包括基类
         Class superClass=clazz;
+        List<Field> fList=new ArrayList<>(clazz.getDeclaredFields().length);
         do{
             fList.addAll(Arrays.asList(superClass.getDeclaredFields()));
             superClass=superClass.getSuperclass();
         }while (superClass.getSuperclass()!=null);
-        for (Field f:fList){
-            System.out.println(f.getName());
-        }
-
+        //找到所有public Setter方法
+        //与成员进行名称匹配
+        //匹配到时调用setter初始化对象成员
         Method[] allMethods = clazz.getMethods();
 
-        for (Method m : allMethods) {
-            if (m.getName().startsWith("set")) {
-               echo(m.getName());
-                Class<?>[] pTypes=m.getParameterTypes();
-                for(Class<?> pType:pTypes){
-                    echo(pType.getName());
+        for(Field f:fList){
+            for(Method m:allMethods){
+                if(isSetterForMember(f,m)){
+                    echo("成员"+f.getName()+"匹配到setter");
+                    Class fType=f.getType();
+                    Object fInst=universalInit(fType);
+                    try {
+                        m.invoke(inst,fInst);
+                    } catch (IllegalAccessException | InvocationTargetException e) {
+                        err("成员"+f.getName()+"的setter调用失败");
+                        e.printStackTrace();
+                    }
                 }
             }
         }
+        return inst;
+    }
 
-        try {
-            return clazz.newInstance();
-        } catch (InstantiationException | IllegalAccessException e) {
-            e.printStackTrace();
-        }
-        err("java Bean实例化失败");
-        return null;
+    /**
+     * 判断方法是成员的setter
+     * @param f
+     * @param m
+     * @return
+     */
+    private boolean isSetterForMember(Field f, Method m) {
+        String fieldName=f.getName();
+        String setterName=m.getName();
+        String setterName_="set"+CharacterUtil.charToUpperCase(fieldName.charAt(0))+fieldName.substring(1);
+        return setterName.equals(setterName_);
+
     }
 
     private <T, G1, G2> Map<G1, G2> initMap(Class<T> clazz, Class<G1> gType1, Class<G2> gType2) {

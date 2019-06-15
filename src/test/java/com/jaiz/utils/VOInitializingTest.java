@@ -12,6 +12,8 @@ public class VOInitializingTest {
     public void test3(){
         VOInitializer init=new VOInitializer();
         TestVO test=init.universalInit(TestVO.class);
+        System.out.println(test.getComboVO().getCombo());
+        System.out.println(test.getComboVO().getDate());
     }
 
     @Test
