@@ -1,6 +1,8 @@
 package com.jaiz.utils;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class TestVO extends SuperTestVO{
 
@@ -13,6 +15,26 @@ public class TestVO extends SuperTestVO{
     private TestComboVO comboVO;
 
     private List<String> listMember;
+
+    private Set<String> setMember;
+
+    public Set<String> getSetMember() {
+        return setMember;
+    }
+
+    public void setSetMember(Set<String> setMember) {
+        this.setMember = setMember;
+    }
+
+    private Map<String,String> mapMember;
+
+    public Map<String, String> getMapMember() {
+        return mapMember;
+    }
+
+    public void setMapMember(Map<String, String> mapMember) {
+        this.mapMember = mapMember;
+    }
 
     public List<String> getListMember() {
         return listMember;

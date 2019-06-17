@@ -12,8 +12,15 @@ public class VOInitializingTest {
     public void test3(){
         VOInitializer init=new VOInitializer();
         TestVO test=init.universalInit(TestVO.class);
-        System.out.println(test.getComboVO().getCombo());
-        System.out.println(test.getComboVO().getDate());
+
+        //测试List/Set/Map的实例化
+        List lm=test.getListMember();
+        Set sm=test.getSetMember();
+        Map mm=test.getMapMember();
+        lm.forEach(e-> System.out.println(e));
+        sm.forEach(e-> System.out.println(e));
+        mm.forEach((k,v)-> System.out.println(k+":"+v));
+
     }
 
     @Test

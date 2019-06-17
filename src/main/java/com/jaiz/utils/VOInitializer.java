@@ -138,7 +138,7 @@ public class VOInitializer {
     private <T> T initJavaBean(Class<T> clazz) {
         T inst;
         try {
-            inst= clazz.newInstance();
+            inst = clazz.newInstance();
         } catch (InstantiationException | IllegalAccessException e) {
             err("java Bean实例化失败");
             e.printStackTrace();
@@ -146,27 +146,57 @@ public class VOInitializer {
         }
         //找到所有成员属性
         //包括基类
-        Class superClass=clazz;
-        List<Field> fList=new ArrayList<>(clazz.getDeclaredFields().length);
-        do{
+        Class superClass = clazz;
+        List<Field> fList = new ArrayList<>(clazz.getDeclaredFields().length);
+        do {
             fList.addAll(Arrays.asList(superClass.getDeclaredFields()));
-            superClass=superClass.getSuperclass();
-        }while (superClass.getSuperclass()!=null);
+            superClass = superClass.getSuperclass();
+        } while (superClass.getSuperclass() != null);
         //找到所有public Setter方法
         //与成员进行名称匹配
         //匹配到时调用setter初始化对象成员
         Method[] allMethods = clazz.getMethods();
 
-        for(Field f:fList){
-            for(Method m:allMethods){
-                if(isSetterForMember(f,m)){
-                    echo("成员"+f.getName()+"匹配到setter");
-                    Class fType=f.getType();
-                    Object fInst=universalInit(fType);
+        for (Field f : fList) {
+            for (Method m : allMethods) {
+                if (isSetterForMember(f, m)) {
+                    echo("成员" + f.getName() + "匹配到setter");
+                    Class fType = f.getType();
+                    //这里需要鉴别一下是否属于集合/Map类型,否则在填写泛型的时候,强制传null,会出现异常
+                    Object fInst;
+                    if (isListType(fType) || isSetType(fType)) {
+                        String fullTypeName = f.getGenericType().getTypeName();
+                        String gTypeName = clipGTypeName(fullTypeName);
+                        try {
+                            echo(gTypeName);
+                            Class gType = Class.forName(gTypeName);
+                            fInst = universalInit(fType, gType);
+                        } catch (ClassNotFoundException e) {
+                            err("获取集合泛型类型失败");
+                            e.printStackTrace();
+                            //跳出内层循环,去搞下一个成员
+                            break;
+                        }
+                    } else if (isMapType(fType)) {
+                        String gTypeName = f.getGenericType().getTypeName();
+                        echo("待裁剪:" + gTypeName);
+                        String[] gTypeNames = clipMapGTypeName(gTypeName);
+                        try {
+                            Class keyType = Class.forName(gTypeNames[0]);
+                            Class valueType = Class.forName(gTypeNames[1]);
+                            fInst = universalInit(fType, keyType, valueType);
+                        } catch (ClassNotFoundException e) {
+                            err("Map类型键/值类型获取失败");
+                            e.printStackTrace();
+                            break;
+                        }
+                    } else {
+                        fInst = universalInit(fType);
+                    }
                     try {
-                        m.invoke(inst,fInst);
+                        m.invoke(inst, fInst);
                     } catch (IllegalAccessException | InvocationTargetException e) {
-                        err("成员"+f.getName()+"的setter调用失败");
+                        err("成员" + f.getName() + "的setter调用失败");
                         e.printStackTrace();
                     }
                 }
@@ -176,22 +206,69 @@ public class VOInitializer {
     }
 
     /**
+     * 裁剪Map类型的泛型名
+     *
+     * @param fullName
+     * @return 索引0:键类型名 索引1:值类型名
+     */
+    private String[] clipMapGTypeName(String fullName) {
+        String gTypeName2 = clipGTypeName(fullName);
+        String[] gTypeNames = gTypeName2.split(",");
+        for (int i = 0; i < gTypeNames.length; i++) {
+            gTypeNames[i] = gTypeNames[i].trim();
+        }
+        return gTypeNames;
+    }
+
+    /**
+     * 裁剪集合类型的泛型名
+     *
+     * @param fullName
+     * @return
+     */
+    private String clipGTypeName(String fullName) {
+        if (FastStringUtil.isBlank(fullName)) {
+            return "EMPTY_TYPE_NAME";
+        }
+        int leftIndex = fullName.indexOf('<');
+        int rightIndex = fullName.indexOf('>');
+        if (
+            //符号存在
+                leftIndex >= 0 && rightIndex >= 0 &&
+                        //位置正确
+                        leftIndex < rightIndex &&
+                        //避免越界
+                        leftIndex < fullName.length() && rightIndex < fullName.length()
+        ) {
+            return fullName.substring(leftIndex + 1, rightIndex);
+        }
+        return "UNKOWN_GENERIC_TYPE_NAME";
+    }
+
+    /**
      * 判断方法是成员的setter
+     *
      * @param f
      * @param m
      * @return
      */
     private boolean isSetterForMember(Field f, Method m) {
-        String fieldName=f.getName();
-        String setterName=m.getName();
-        String setterName_="set"+CharacterUtil.charToUpperCase(fieldName.charAt(0))+fieldName.substring(1);
+        String fieldName = f.getName();
+        String setterName = m.getName();
+        String setterName_ = "set" + CharacterUtil.charToUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
         return setterName.equals(setterName_);
 
     }
 
     private <T, G1, G2> Map<G1, G2> initMap(Class<T> clazz, Class<G1> gType1, Class<G2> gType2) {
         try {
-            Map<G1, G2> mapInst = (Map<G1, G2>) clazz.newInstance();
+            Map mapInst;
+            if (clazz == Map.class) {
+                //默认采用HashMap作为实现
+                mapInst = new HashMap();
+            } else {
+                mapInst = (Map) clazz.newInstance();
+            }
             G1 key = universalInit(gType1);
             G2 value = universalInit(gType2);
             mapInst.put(key, value);
@@ -209,7 +286,13 @@ public class VOInitializer {
 
     private <T, G> Set<G> initSet(Class<T> clazz, Class<G> gType) {
         try {
-            Set<G> setInst = (Set<G>) clazz.newInstance();
+            Set setInst;
+            if (clazz == Set.class) {
+                //采用HashSet作为默认实现
+                setInst = new HashSet();
+            } else {
+                setInst = (Set) clazz.newInstance();
+            }
             setInst.add(universalInit(gType));
             return setInst;
         } catch (InstantiationException | IllegalAccessException e) {
@@ -223,11 +306,27 @@ public class VOInitializer {
         return Set.class.isAssignableFrom(clazz);
     }
 
+    /**
+     * 实例化List对象
+     *
+     * @param clazz
+     * @param gType
+     * @param <T>
+     * @param <G>
+     * @return
+     */
     private <T, G> List<G> initList(Class<T> clazz, Class<G> gType) {
         //一定是某个实现类才可能实例化
         //获取List实例
         try {
-            List<G> listInst = (List<G>) clazz.newInstance();
+            //List类型无法直接实例化,这里默认使用ArrayList作为实现
+            List listInst;
+            if (clazz == List.class) {
+                listInst = new ArrayList();
+            } else {
+                //暂不考虑其他List类型接口或抽象List的实例化
+                listInst = (List) clazz.newInstance();
+            }
             //获取泛型类型
             //暂时认为List中不会存储List
             listInst.add(universalInit(gType));
