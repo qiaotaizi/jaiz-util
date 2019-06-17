@@ -14,7 +14,7 @@ public class VOInitializer {
     private final boolean on = true;
     private final boolean off = false;
 
-    private final boolean echoSwitch = on;
+    private final boolean echoSwitch = off;
 
     /**
      * 控制台输出
