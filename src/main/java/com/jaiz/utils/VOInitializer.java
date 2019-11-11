@@ -4,6 +4,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
 import java.util.*;
 
 public class VOInitializer {
@@ -108,6 +109,11 @@ public class VOInitializer {
             return initBoxedPrimitive(clazz);
         }
 
+        //BigDecimal
+        if(clazz== BigDecimal.class){
+            return (T)initBigDecimal();
+        }
+
         //数组
         if (isArrayType(clazz)) {
             //数组元素类型
@@ -133,6 +139,14 @@ public class VOInitializer {
         //其他对象,认为是javaBean
         //按照getter/setter规则来处理
         return initJavaBean(clazz);
+    }
+
+    /**
+     * 初始化BigDecimal字段
+     * @return
+     */
+    private BigDecimal initBigDecimal() {
+        return new BigDecimal("0.00");
     }
 
     private <T> T initJavaBean(Class<T> clazz) {
